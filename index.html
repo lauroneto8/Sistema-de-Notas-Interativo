@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Notas Interativo</title>
+    <!-- Carregamento do Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração do Tailwind para usar a fonte Inter e cores personalizadas -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5', // Indigo-600
+                        'secondary': '#6b7280', // Gray-500
+                        'success': '#10b981', // Emerald-500
+                        'fail': '#ef4444', // Red-500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilização Customizada para o Requisito de Destaque Visual */
+        /* Alunos Aprovados (ex: verde claro) */
+        .aprovado-row {
+            background-color: #d1fae5; /* Verde bem claro (Emerald-100) */
+        }
+        /* Alunos Reprovados (ex: vermelho claro) */
+        .reprovado-row {
+            background-color: #fee2e2; /* Vermelho bem claro (Red-100) */
+        }
+        /* Responsividade para a Tabela */
+        @media (max-width: 768px) {
+            .table-container {
+                overflow-x: auto;
+            }
+            .table-container table {
+                min-width: 850px; /* Ajuste a largura mínima para acomodar 3 notas + Ações */
+            }
+        }
+        /* Estilo para a Tabela */
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        /* Estilo para o Botão de Fechar Mensagem */
+        .close-btn {
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Título Principal -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-primary tracking-tight md:text-5xl">
+                Sistema de Notas Interativo
+            </h1>
+            <p class="text-secondary mt-2 text-lg">Cadastro, Cálculo e Acompanhamento de Alunos</p>
+        </header>
+
+        <!-- Formulário de Cadastro -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 p-6 bg-white shadow-xl rounded-xl">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Cadastrar Novo Aluno</h2>
+                
+                <!-- Mensagem de Validação (substitui o alert()) -->
+                <div id="validation-message" class="hidden p-3 mb-4 rounded-lg bg-red-100 border border-red-400 text-red-700 flex justify-between items-center" role="alert">
+                    <span id="message-text"></span>
+                    <button class="close-btn" onclick="document.getElementById('validation-message').classList.add('hidden')">&times;</button>
+                </div>
+
+                <form id="student-form" class="space-y-4">
+                    <!-- Campo Nome do Aluno -->
+                    <div>
+                        <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome do Aluno</label>
+                        <input type="text" id="nome" name="nome" required 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150"
+                               placeholder="Ex: Maria da Silva">
+                    </div>
+
+                    <!-- Campos Notas (Agora com 3 Notas) -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label for="nota1" class="block text-sm font-medium text-gray-700 mb-1">Nota 1</label>
+                            <input type="number" id="nota1" name="nota1" required min="0" max="10" step="0.1"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150"
+                                   placeholder="0.0 - 10.0">
+                        </div>
+                        <div>
+                            <label for="nota2" class="block text-sm font-medium text-gray-700 mb-1">Nota 2</label>
+                            <input type="number" id="nota2" name="nota2" required min="0" max="10" step="0.1"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150"
+                                   placeholder="0.0 - 10.0">
+                        </div>
+                        <!-- Campo: Nota 3 -->
+                        <div>
+                            <label for="nota3" class="block text-sm font-medium text-gray-700 mb-1">Nota 3</label>
+                            <input type="number" id="nota3" name="nota3" required min="0" max="10" step="0.1"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150"
+                                   placeholder="0.0 - 10.0">
+                        </div>
+                    </div>
+
+                    <!-- Botão Adicionar Aluno -->
+                    <button type="submit" 
+                            class="w-full bg-primary text-white font-bold py-3 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-[1.01]">
+                        Adicionar Aluno
+                    </button>
+                </form>
+            </div>
+
+            <!-- Tabela de Resultados -->
+            <div class="lg:col-span-2 p-6 bg-white shadow-xl rounded-xl">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Registros Cadastrados</h2>
+                
+                <div class="table-container overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                <th class="w-1/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Nota 1</th>
+                                <th class="w-1/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Nota 2</th>
+                                <th class="w-1/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Nota 3</th>
+                                <th class-="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Média</th>
+                                <th class="w-3/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
+                                <!-- NOVA COLUNA: Ações -->
+                                <th class="w-1/12 text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Registros de Alunos serão inseridos aqui pelo JavaScript -->
+                            <tr id="empty-state">
+                                <!-- Colspan ajustado para 7 colunas: Nome, N1, N2, N3, Média, Resultado, Ações -->
+                                <td colspan="7" class="text-center text-gray-500 py-4">Nenhum aluno cadastrado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Lógica JavaScript -->
+    <script>
+        // Variável global para armazenar os dados dos alunos
+        let students = [];
+        // Chave de armazenamento no localStorage
+        const STORAGE_KEY = 'student_grades_data';
+        // Média mínima para aprovação
+        const MIN_AVERAGE = 6.0;
+
+        // Elementos do DOM
+        const form = document.getElementById('student-form');
+        const tableBody = document.getElementById('results-table-body');
+        const emptyState = document.getElementById('empty-state');
+        const validationMessage = document.getElementById('validation-message');
+        const messageText = document.getElementById('message-text');
+
+        /**
+         * Exibe uma mensagem de erro na UI.
+         * @param {string} message - A mensagem de erro a ser exibida.
+         */
+        function showMessage(message) {
+            messageText.textContent = message;
+            validationMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Converte a média numérica em status (Aprovado/Reprovado).
+         * @param {number} average - A média calculada.
+         * @returns {string} - "Aprovado" ou "Reprovado".
+         */
+        function getStatus(average) {
+            return average >= MIN_AVERAGE ? 'Aprovado' : 'Reprovado';
+        }
+
+        /**
+         * Carrega os dados do localStorage ao iniciar.
+         */
+        function loadStudents() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    students = JSON.parse(data);
+                    // Adaptar dados antigos (com menos de 3 notas) para a nova estrutura (3 notas)
+                    students.forEach(student => {
+                        if (typeof student.nota3 === 'undefined') {
+                            // Define nota3 como 0 para manter compatibilidade e recalcula a média
+                            student.nota3 = 0.0;
+                            student.average = (student.nota1 + student.nota2 + student.nota3) / 3;
+                            student.status = getStatus(student.average);
+                        }
+                    });
+                    saveStudents(); // Salva os dados adaptados
+                } catch (e) {
+                    console.error("Erro ao carregar dados do localStorage:", e);
+                    students = []; // Limpa dados corrompidos
+                }
+            }
+            renderTable(); // Renderiza a tabela inicial
+        }
+
+        /**
+         * Salva os dados atualizados no localStorage.
+         */
+        function saveStudents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+        }
+        
+        /**
+         * Remove um aluno da lista pelo seu índice.
+         * @param {number} index - O índice do aluno a ser removido no array 'students'.
+         */
+        function removeStudent(index) {
+            // Verifica se o índice é válido
+            if (index >= 0 && index < students.length) {
+                // Remove o aluno do array
+                students.splice(index, 1);
+                // Salva a alteração no localStorage
+                saveStudents();
+                // Renderiza a tabela novamente
+                renderTable();
+            } else {
+                console.error("Tentativa de remover aluno com índice inválido:", index);
+            }
+        }
+
+        /**
+         * Renderiza a tabela de resultados com os dados dos alunos.
+         * Aplica o destaque visual (cor) conforme o requisito.
+         */
+        function renderTable() {
+            // Limpa o conteúdo atual da tabela
+            tableBody.innerHTML = '';
+            
+            if (students.length === 0) {
+                // Exibe o estado vazio se não houver alunos
+                emptyState.style.display = 'table-row';
+                // Garante que o colspan esteja correto
+                emptyState.querySelector('td').setAttribute('colspan', '7'); 
+                tableBody.appendChild(emptyState);
+                return;
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            // Percorre a lista de alunos e cria as linhas da tabela
+            students.forEach((student, index) => {
+                const row = document.createElement('tr');
+                // Aplica a classe de destaque (verde/vermelho claro)
+                const rowClass = student.status === 'Aprovado' ? 'aprovado-row' : 'reprovado-row';
+                row.className = rowClass + ' transition duration-300 hover:shadow-lg';
+
+                // Cria o elemento de Status com cor destacada
+                const statusSpan = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    ${student.status === 'Aprovado' ? 'bg-success/20 text-success' : 'bg-fail/20 text-fail'}">
+                                    ${student.status}
+                                    </span>`;
+
+                // NOVO: Botão Remover
+                const removeButton = `<button onclick="removeStudent(${index})" 
+                                      class="bg-fail/80 text-white text-xs font-semibold py-1 px-3 rounded-full hover:bg-fail transition duration-150">
+                                      Remover
+                                      </button>`;
+
+                row.innerHTML = `
+                    <td class="whitespace-nowrap font-medium text-gray-900">${student.name}</td>
+                    <td class="whitespace-nowrap text-gray-600">${student.nota1.toFixed(1)}</td>
+                    <td class="whitespace-nowrap text-gray-600">${student.nota2.toFixed(1)}</td>
+                    <td class="whitespace-nowrap text-gray-600">${student.nota3.toFixed(1)}</td>
+                    <td class="whitespace-nowrap font-bold">${student.average.toFixed(2)}</td>
+                    <td class="whitespace-nowrap">${statusSpan}</td>
+                    <td class="whitespace-nowrap">${removeButton}</td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        /**
+         * Limpa os campos do formulário.
+         */
+        function clearForm() {
+            form.reset();
+            document.getElementById('nome').focus(); // Foca no primeiro campo para usabilidade
+        }
+
+        /**
+         * Lida com o evento de submissão do formulário.
+         */
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            validationMessage.classList.add('hidden'); // Oculta mensagens anteriores
+
+            // 1. Coleta e valida os dados
+            const name = document.getElementById('nome').value.trim();
+            let nota1 = parseFloat(document.getElementById('nota1').value);
+            let nota2 = parseFloat(document.getElementById('nota2').value);
+            // Coleta a Nota 3
+            let nota3 = parseFloat(document.getElementById('nota3').value);
+
+
+            if (!name || isNaN(nota1) || isNaN(nota2) || isNaN(nota3)) {
+                showMessage("Por favor, preencha todos os campos.");
+                return;
+            }
+
+            // Validação de intervalo (0 a 10) para todas as notas
+            if (nota1 < 0 || nota1 > 10 || nota2 < 0 || nota2 > 10 || nota3 < 0 || nota3 > 10) {
+                 showMessage("As notas devem ser valores entre 0.0 e 10.0.");
+                 return;
+            }
+
+            // 2. Calcula a média e o status (DIVIDE POR 3)
+            const average = (nota1 + nota2 + nota3) / 3;
+            const status = getStatus(average);
+
+            // 3. Cria o objeto do novo aluno
+            const newStudent = {
+                name: name,
+                nota1: nota1,
+                nota2: nota2,
+                nota3: nota3, // Inclui a Nota 3
+                average: average,
+                status: status,
+            };
+
+            // 4. Insere o aluno na lista, salva e renderiza
+            students.push(newStudent);
+            saveStudents();
+            renderTable();
+            
+            // 5. Limpa os campos (Requisito Funcional)
+            clearForm();
+        }
+
+        // Adiciona o listener de evento ao formulário
+        form.addEventListener('submit', handleFormSubmit);
+
+        // Carrega os alunos ao carregar a página
+        window.onload = loadStudents;
+
+        // Torna a função removeStudent globalmente acessível para os botões da tabela
+        window.removeStudent = removeStudent;
+
+    </script>
+</body>
+</html>
